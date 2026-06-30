@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HUL — Working Capital Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --navy-950:#081627;
+    --navy-900:#0E2A47;
+    --navy-800:#15375C;
+    --navy-700:#1E4A78;
+    --blue-500:#3E7CB1;
+    --blue-300:#8FC1E3;
+    --ice-100:#EAF2F8;
+    --ice-050:#F5F9FC;
+    --white:#FFFFFF;
+    --teal-600:#0F7A66;
+    --teal-100:#DCF1EC;
+    --ink-900:#0B1B2B;
+    --ink-700:#16263A;
+    --muted-500:#5C7593;
+    --muted-300:#9AAEC2;
+    --line:#D9E4EE;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(8,22,39,0.06), 0 8px 24px rgba(8,22,39,0.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',sans-serif;
+    background:var(--ice-050);
+    color:var(--ink-700);
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{display:flex; min-height:100vh;}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:248px;
+    background:linear-gradient(180deg, var(--navy-950) 0%, var(--navy-900) 100%);
+    color:var(--white);
+    display:flex;
+    flex-direction:column;
+    position:fixed;
+    top:0; left:0; bottom:0;
+    z-index:20;
+  }
+  .brand{
+    padding:26px 22px 18px;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .brand-mark{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:19px;
+    letter-spacing:0.01em;
+  }
+  .brand-sub{
+    font-size:11px;
+    color:var(--blue-300);
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    margin-top:4px;
+  }
+  nav.tabs{
+    flex:1;
+    padding:18px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .nav-eyebrow{
+    font-size:10.5px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--muted-300);
+    padding:10px 12px 6px;
+  }
+  .nav-btn{
+    appearance:none;
+    border:none;
+    background:transparent;
+    color:var(--blue-300);
+    text-align:left;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    font-weight:500;
+    padding:11px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    transition:background .15s ease, color .15s ease;
+  }
+  .nav-btn .dot{
+    width:6px; height:6px; border-radius:50%;
+    background:var(--muted-300);
+    flex-shrink:0;
+    transition:background .15s ease, box-shadow .15s ease;
+  }
+  .nav-btn:hover{ background:rgba(255,255,255,0.06); color:var(--white); }
+  .nav-btn.active{
+    background:var(--white);
+    color:var(--navy-900);
+    font-weight:600;
+  }
+  .nav-btn.active .dot{ background:var(--teal-600); box-shadow:0 0 0 3px rgba(15,122,102,0.25); }
+  .nav-btn:focus-visible{ outline:2px solid var(--blue-300); outline-offset:2px; }
+
+  .sidebar-foot{
+    padding:16px 22px 22px;
+    border-top:1px solid rgba(255,255,255,0.08);
+    font-size:11px;
+    color:var(--muted-300);
+    line-height:1.5;
+  }
+
+  /* ---------- Main ---------- */
+  .main{ margin-left:248px; flex:1; min-width:0; }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:22px 36px;
+    background:var(--white);
+    border-bottom:1px solid var(--line);
+    position:sticky; top:0; z-index:10;
+  }
+  .topbar h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:22px;
+    margin:0 0 3px;
+    color:var(--ink-900);
+  }
+  .topbar p{ margin:0; font-size:13px; color:var(--muted-500); }
+  .badge{
+    font-size:11.5px;
+    font-weight:600;
+    letter-spacing:0.03em;
+    color:var(--teal-600);
+    background:var(--teal-100);
+    padding:6px 12px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+
+  .page{ display:none; padding:28px 36px 56px; }
+  .page.active{ display:block; }
+
+  /* ---------- KPI Cards ---------- */
+  .kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:16px;
+    margin-bottom:24px;
+  }
+  .kpi-card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px 20px;
+    box-shadow:var(--shadow);
+    position:relative;
+    overflow:hidden;
+  }
+  .kpi-card::before{
+    content:"";
+    position:absolute; left:0; top:0; bottom:0; width:3px;
+    background:var(--navy-700);
+  }
+  .kpi-card.positive::before{ background:var(--teal-600); }
+  .kpi-label{
+    font-size:12px; color:var(--muted-500); font-weight:600;
+    letter-spacing:0.02em; text-transform:uppercase;
+    margin-bottom:8px;
+  }
+  .kpi-value{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:28px;
+    font-weight:600;
+    color:var(--ink-900);
+    line-height:1.1;
+  }
+  .kpi-value.teal{ color:var(--teal-600); }
+  .kpi-delta{
+    margin-top:6px;
+    font-size:12px;
+    color:var(--muted-500);
+  }
+  .kpi-delta.good{ color:var(--teal-600); font-weight:600; }
+
+  /* ---------- Panels / charts ---------- */
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .grid-3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+  .panel{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px 20px 14px;
+    box-shadow:var(--shadow);
+    margin-bottom:16px;
+  }
+  .panel h3{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:14.5px;
+    margin:0 0 12px;
+    color:var(--ink-900);
+    font-weight:600;
+  }
+  .panel .chart-wrap{ position:relative; height:220px; }
+  .chart-wrap.tall{ height:260px; }
+
+  /* ---------- Table ---------- */
+  table.data-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+  table.data-table thead th{
+    background:var(--navy-900);
+    color:var(--white);
+    text-align:right;
+    padding:10px 14px;
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:0.02em;
+  }
+  table.data-table thead th:first-child{ text-align:left; border-radius:8px 0 0 0; }
+  table.data-table thead th:last-child{ border-radius:0 8px 0 0; }
+  table.data-table td{
+    padding:10px 14px;
+    text-align:right;
+    border-bottom:1px solid var(--line);
+    font-family:'IBM Plex Mono',monospace;
+    color:var(--ink-700);
+  }
+  table.data-table td:first-child{
+    text-align:left;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    color:var(--ink-900);
+  }
+  table.data-table tbody tr:nth-child(even){ background:var(--ice-100); }
+  td.neg{ color:var(--teal-600); font-weight:600; }
+
+  /* ---------- Simulator ---------- */
+  .sim-layout{ display:grid; grid-template-columns:340px 1fr; gap:20px; align-items:start; }
+  .slider-block{ margin-bottom:22px; }
+  .slider-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:6px;
+  }
+  .slider-head .name{ font-weight:600; font-size:13.5px; color:var(--ink-900); }
+  .slider-head .vals{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--muted-500); }
+  .slider-head .vals b{ color:var(--teal-600); font-weight:600; }
+  input[type=range]{
+    width:100%;
+    -webkit-appearance:none;
+    height:6px;
+    border-radius:4px;
+    background:var(--line);
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:18px; height:18px; border-radius:50%;
+    background:var(--navy-800);
+    border:3px solid var(--white);
+    box-shadow:0 0 0 1px var(--navy-800);
+    cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:18px; height:18px; border-radius:50%;
+    background:var(--navy-800);
+    border:3px solid var(--white);
+    box-shadow:0 0 0 1px var(--navy-800);
+    cursor:pointer; border:none;
+  }
+  input[type=range]:focus-visible::-webkit-slider-thumb{ outline:2px solid var(--blue-300); outline-offset:2px; }
+  .reset-btn{
+    margin-top:6px;
+    font-family:'Inter',sans-serif;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--navy-800);
+    background:var(--ice-100);
+    border:1px solid var(--line);
+    padding:9px 14px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .reset-btn:hover{ background:var(--ice-050); }
+
+  /* ---------- Insights (Page 4) ---------- */
+  .insight-card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    box-shadow:var(--shadow);
+    margin-bottom:12px;
+    display:flex;
+    gap:14px;
+    align-items:flex-start;
+  }
+  .insight-num{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:13px;
+    color:var(--white);
+    background:var(--navy-800);
+    width:28px; height:28px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .insight-text{ font-size:14px; color:var(--ink-700); line-height:1.5; padding-top:3px; }
+
+  .section-label{
+    font-size:11.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--muted-500); margin:6px 0 12px;
+  }
+
+  @media (max-width: 1080px){
+    .kpi-grid{ grid-template-columns:repeat(2, 1fr); }
+    .grid-2, .grid-3{ grid-template-columns:1fr; }
+    .sim-layout{ grid-template-columns:1fr; }
+  }
+  @media (max-width: 760px){
+    .sidebar{ width:72px; }
+    .sidebar .brand-sub, .sidebar .nav-btn span.label, .sidebar-foot{ display:none; }
+    .main{ margin-left:72px; }
+    .nav-eyebrow{ display:none; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">HUL Working Capital</div>
+      <div class="brand-sub">Intelligence Dashboard</div>
+    </div>
+    <nav class="tabs" id="navTabs">
+      <div class="nav-eyebrow">Pages</div>
+      <button class="nav-btn active" data-page="page1"><span class="dot"></span><span class="label">Executive Summary</span></button>
+      <button class="nav-btn" data-page="page2"><span class="dot"></span><span class="label">Working Capital Analytics</span></button>
+      <button class="nav-btn" data-page="page3"><span class="dot"></span><span class="label">Digital Twin Simulation</span></button>
+      <button class="nav-btn" data-page="page4"><span class="dot"></span><span class="label">AI Forecast</span></button>
+    </nav>
+    <div class="sidebar-foot">
+      FY2021–FY2025 actuals · FY2026E–FY2028E forecast<br>
+      Figures in ₹ Crore, consolidated
+    </div>
+  </aside>
+
+  <div class="main">
+
+    <!-- ================= PAGE 1 ================= -->
+    <div class="page active" id="page1">
+      <div class="topbar">
+        <div>
+          <h1>Executive Summary</h1>
+          <p>HUL consolidated working capital position — FY2025</p>
+        </div>
+        <span class="badge">FY2025 Snapshot</span>
+      </div>
+      <div style="padding:28px 36px 0;">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Revenue (₹ Cr)</div>
+            <div class="kpi-value" id="kpiRevenue">—</div>
+            <div class="kpi-delta">FY2025, consolidated</div>
+          </div>
+          <div class="kpi-card positive">
+            <div class="kpi-label">Cash Conversion Cycle</div>
+            <div class="kpi-value teal" id="kpiCCC">—</div>
+            <div class="kpi-delta good">Negative CCC — favorable</div>
+          </div>
+          <div class="kpi-card positive">
+            <div class="kpi-label">Cash Released (₹ Cr)</div>
+            <div class="kpi-value teal" id="kpiCash">—</div>
+            <div class="kpi-delta">From simulator scenario</div>
+          </div>
+          <div class="kpi-card positive">
+            <div class="kpi-label">WC Improvement %</div>
+            <div class="kpi-value teal" id="kpiWC">—</div>
+            <div class="kpi-delta">Cash released ÷ revenue</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Revenue Trend</h3>
+            <div class="chart-wrap"><canvas id="chartRevenueTrend"></canvas></div>
+          </div>
+          <div class="panel">
+            <h3>CCC Trend</h3>
+            <div class="chart-wrap"><canvas id="chartCCCTrend"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= PAGE 2 ================= -->
+    <div class="page" id="page2">
+      <div class="topbar">
+        <div>
+          <h1>Working Capital Analytics</h1>
+          <p>Inventory, receivable and payable cycle trends, FY2021–FY2025</p>
+        </div>
+        <span class="badge">5-Year History</span>
+      </div>
+      <div style="padding:28px 36px 0;">
+        <div class="grid-3">
+          <div class="panel">
+            <h3>Inventory Days Trend (DIO)</h3>
+            <div class="chart-wrap"><canvas id="chartDIO"></canvas></div>
+          </div>
+          <div class="panel">
+            <h3>Receivable Days Trend (DSO)</h3>
+            <div class="chart-wrap"><canvas id="chartDSO"></canvas></div>
+          </div>
+          <div class="panel">
+            <h3>Payable Days Trend (DPO)</h3>
+            <div class="chart-wrap"><canvas id="chartDPO"></canvas></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Working Capital Components</h3>
+          <div class="chart-wrap tall"><canvas id="chartComponents"></canvas></div>
+        </div>
+        <div class="panel">
+          <h3>Year-by-Year Detail</h3>
+          <table class="data-table" id="detailTable">
+            <thead>
+              <tr><th>Year</th><th>Revenue</th><th>DIO</th><th>DSO</th><th>DPO</th><th>CCC</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= PAGE 3 ================= -->
+    <div class="page" id="page3">
+      <div class="topbar">
+        <div>
+          <h1>Digital Twin Simulation</h1>
+          <p>Live what-if model — move the sliders to test a working capital scenario</p>
+        </div>
+        <span class="badge" id="simBadge">Live Model</span>
+      </div>
+      <div style="padding:28px 36px 0;">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Current CCC</div>
+            <div class="kpi-value" id="simCurCCC">—</div>
+          </div>
+          <div class="kpi-card positive">
+            <div class="kpi-label">New CCC</div>
+            <div class="kpi-value teal" id="simNewCCC">—</div>
+          </div>
+          <div class="kpi-card positive">
+            <div class="kpi-label">CCC Improvement</div>
+            <div class="kpi-value teal" id="simImprovement">—</div>
+            <div class="kpi-delta">days released from cycle</div>
+          </div>
+          <div class="kpi-card positive">
+            <div class="kpi-label">Total Cash Released</div>
+            <div class="kpi-value teal" id="simCash">—</div>
+            <div class="kpi-delta">₹ Crore, at FY2025 scale</div>
+          </div>
+        </div>
+
+        <div class="sim-layout">
+          <div class="panel">
+            <h3>Scenario Controls</h3>
+            <div class="slider-block">
+              <div class="slider-head">
+                <span class="name">DIO — Inventory Days</span>
+                <span class="vals">Current 25 → <b id="dioOut">22</b></span>
+              </div>
+              <input type="range" id="dioSlider" min="10" max="40" step="1" value="22">
+            </div>
+            <div class="slider-block">
+              <div class="slider-head">
+                <span class="name">DSO — Receivable Days</span>
+                <span class="vals">Current 10 → <b id="dsoOut">8</b></span>
+              </div>
+              <input type="range" id="dsoSlider" min="2" max="25" step="1" value="8">
+            </div>
+            <div class="slider-block">
+              <div class="slider-head">
+                <span class="name">DPO — Payable Days</span>
+                <span class="vals">Current 45 → <b id="dpoOut">48</b></span>
+              </div>
+              <input type="range" id="dpoSlider" min="30" max="70" step="1" value="48">
+            </div>
+            <button class="reset-btn" id="resetBtn">Reset to default scenario</button>
+          </div>
+
+          <div>
+            <div class="panel">
+              <h3>Cash Impact Breakdown</h3>
+              <div class="chart-wrap"><canvas id="chartCashImpact"></canvas></div>
+            </div>
+            <div class="panel">
+              <h3>Current vs Scenario Comparison</h3>
+              <div class="chart-wrap"><canvas id="chartComparison"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= PAGE 4 ================= -->
+    <div class="page" id="page4">
+      <div class="topbar">
+        <div>
+          <h1>AI Forecast</h1>
+          <p>Model-predicted working capital cycle, FY2026E–FY2028E</p>
+        </div>
+        <span class="badge">3-Year Outlook</span>
+      </div>
+      <div style="padding:28px 36px 0;">
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Predicted CCC Trend</h3>
+            <div class="chart-wrap tall"><canvas id="chartPredictedCCC"></canvas></div>
+          </div>
+          <div class="panel">
+            <h3>Predicted Working Capital Cycle</h3>
+            <table class="data-table" id="aiTable">
+              <thead>
+                <tr><th>Year</th><th>DIO</th><th>DSO</th><th>DPO</th><th>CCC</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-label">AI Insights</div>
+        <div class="insight-card"><div class="insight-num">1</div><div class="insight-text">Inventory efficiency expected to improve.</div></div>
+        <div class="insight-card"><div class="insight-num">2</div><div class="insight-text">Receivable collection period expected to reduce.</div></div>
+        <div class="insight-card"><div class="insight-num">3</div><div class="insight-text">Cash Conversion Cycle expected to become more negative.</div></div>
+        <div class="insight-card"><div class="insight-num">4</div><div class="insight-text">Working capital management remains strong.</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ===================== DATA ===================== */
+const years = [2021,2022,2023,2024,2025];
+const revenue = [47028,52446,60580,61896,63121];
+const dio = [46.9,45.8,43.0,46.5,47.3];
+const dso = [14.7,15.3,14.9,15.9,16.3];
+const dpo = [125.0,119.3,113.2,123.9,135.4];
+const ccc = dio.map((d,i)=> +(d+dso[i]-dpo[i]).toFixed(1));
+
+const REV_2025 = 63121, COGS_2025 = 30500;
+
+const forecastYears = [2026,2027,2028];
+const predDIO = [24,23,22];
+const predDSO = [9,8,8];
+const predDPO = [45,45,46];
+const predCCC = predDIO.map((d,i)=> d+predDSO[i]-predDPO[i]);
+
+const fmtINR = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const fmtDays = n => (n>=0?'+':'') + n.toFixed(1) + 'd';
+const fmtPct = n => (n*100).toFixed(2) + '%';
+
+const NAVY = '#15375C';
+const BLUE = '#3E7CB1';
+const TEAL = '#0F7A66';
+const LIGHTBLUE = '#8FC1E3';
+
+/* ===================== NAV ===================== */
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.page).classList.add('active');
+  });
+});
+
+/* ===================== STATIC CONTENT (independent of charting library) ===================== */
+document.getElementById('kpiRevenue').textContent = fmtINR(REV_2025);
+document.getElementById('kpiCCC').textContent = ccc[ccc.length-1].toFixed(1) + 'd';
+
+const detailBody = document.querySelector('#detailTable tbody');
+years.forEach((y,i)=>{
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${y}</td><td>${revenue[i].toLocaleString('en-IN')}</td>
+    <td>${dio[i].toFixed(1)}</td><td>${dso[i].toFixed(1)}</td><td>${dpo[i].toFixed(1)}</td>
+    <td class="neg">${ccc[i].toFixed(1)}</td>`;
+  detailBody.appendChild(tr);
+});
+
+const aiBody = document.querySelector('#aiTable tbody');
+forecastYears.forEach((y,i)=>{
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${y}</td><td>${predDIO[i].toFixed(1)}</td><td>${predDSO[i].toFixed(1)}</td>
+    <td>${predDPO[i].toFixed(1)}</td><td class="neg">${predCCC[i].toFixed(1)}</td>`;
+  aiBody.appendChild(tr);
+});
+
+/* ===================== SIMULATOR LOGIC (independent of charting library) ===================== */
+const CUR_DIO=25, CUR_DSO=10, CUR_DPO=45;
+const dioSlider = document.getElementById('dioSlider');
+const dsoSlider = document.getElementById('dsoSlider');
+const dpoSlider = document.getElementById('dpoSlider');
+let cashImpactChart, comparisonChart;
+
+function updateSimulator(){
+  const newDio = +dioSlider.value, newDso = +dsoSlider.value, newDpo = +dpoSlider.value;
+  document.getElementById('dioOut').textContent = newDio;
+  document.getElementById('dsoOut').textContent = newDso;
+  document.getElementById('dpoOut').textContent = newDpo;
+
+  const curCCC = CUR_DIO + CUR_DSO - CUR_DPO;
+  const newCCC = newDio + newDso - newDpo;
+  const improvement = curCCC - newCCC;
+
+  const invCash = (CUR_DIO - newDio) * COGS_2025 / 365;
+  const recCash = (CUR_DSO - newDso) * REV_2025 / 365;
+  const payCash = (newDpo - CUR_DPO) * COGS_2025 / 365;
+  const totalCash = invCash + recCash + payCash;
+
+  document.getElementById('simCurCCC').textContent = curCCC.toFixed(1) + 'd';
+  document.getElementById('simNewCCC').textContent = newCCC.toFixed(1) + 'd';
+  document.getElementById('simImprovement').textContent = (improvement>=0?'+':'') + improvement.toFixed(1) + 'd';
+  document.getElementById('simCash').textContent = fmtINR(totalCash);
+
+  document.getElementById('kpiCash').textContent = fmtINR(totalCash);
+  document.getElementById('kpiWC').textContent = fmtPct(totalCash/REV_2025);
+
+  if (typeof Chart !== 'undefined') {
+    try { renderSimCharts(invCash, recCash, payCash, CUR_DIO,newDio,CUR_DSO,newDso,CUR_DPO,newDpo); }
+    catch(e) { console.warn('Chart render skipped:', e); }
+  }
+}
+
+[dioSlider, dsoSlider, dpoSlider].forEach(s => s.addEventListener('input', updateSimulator));
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  dioSlider.value = 22; dsoSlider.value = 8; dpoSlider.value = 48;
+  updateSimulator();
+});
+
+/* ===================== CHARTS (Chart.js — degrades gracefully if CDN unavailable) ===================== */
+if (typeof Chart === 'undefined') {
+  console.warn('Chart.js did not load — KPIs and tables remain fully functional; charts are skipped.');
+} else {
+try {
+
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#5C7593';
+Chart.defaults.borderColor = '#D9E4EE';
+
+function lineChartInner(ctx, labels, data, color, suffix){
+  return new Chart(ctx, {
+    type:'line',
+    data:{ labels, datasets:[{
+      data, borderColor:color, backgroundColor:color+'22',
+      borderWidth:2.5, pointRadius:4, pointBackgroundColor:color,
+      pointBorderColor:'#fff', pointBorderWidth:1.5, tension:0.35, fill:true
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false},
+        tooltip:{ callbacks:{ label: c => c.parsed.y.toLocaleString('en-IN') + (suffix||'') } } },
+      scales:{
+        x:{ grid:{display:false} },
+        y:{ grid:{color:'#EAF2F8'}, ticks:{ callback:v=>v.toLocaleString('en-IN') } }
+      }
+    }
+  });
+}
+
+/* ---- Page 1 ---- */
+lineChartInner(document.getElementById('chartRevenueTrend'), years, revenue, NAVY, ' Cr');
+lineChartInner(document.getElementById('chartCCCTrend'), years, ccc, TEAL, 'd');
+
+/* ---- Page 2 ---- */
+lineChartInner(document.getElementById('chartDIO'), years, dio, BLUE, 'd');
+lineChartInner(document.getElementById('chartDSO'), years, dso, BLUE, 'd');
+lineChartInner(document.getElementById('chartDPO'), years, dpo, BLUE, 'd');
+
+new Chart(document.getElementById('chartComponents'), {
+  type:'bar',
+  data:{ labels:years, datasets:[
+    { label:'DIO', data:dio, backgroundColor:NAVY, borderRadius:4 },
+    { label:'DSO', data:dso, backgroundColor:BLUE, borderRadius:4 },
+    { label:'DPO', data:dpo, backgroundColor:LIGHTBLUE, borderRadius:4 },
+  ]},
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'top', labels:{ boxWidth:12, boxHeight:12 } } },
+    scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#EAF2F8'} } }
+  }
+});
+
+/* ---- Page 4 ---- */
+lineChartInner(document.getElementById('chartPredictedCCC'), forecastYears, predCCC, TEAL, 'd');
+
+} catch(e) { console.warn('Chart setup error:', e); }
+}
+
+function renderSimCharts(invCash, recCash, payCash, curDio,newDio,curDso,newDso,curDpo,newDpo){
+  if(cashImpactChart) cashImpactChart.destroy();
+  if(comparisonChart) comparisonChart.destroy();
+
+  cashImpactChart = new Chart(document.getElementById('chartCashImpact'), {
+    type:'bar',
+    data:{ labels:['Inventory Impact','Receivable Impact','Payable Impact'],
+      datasets:[{ data:[invCash, recCash, payCash], backgroundColor:[NAVY, BLUE, TEAL], borderRadius:6 }] },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false},
+        tooltip:{ callbacks:{ label:c=>fmtINR(c.parsed.x)+' Cr' } } },
+      scales:{ x:{ grid:{color:'#EAF2F8'}, ticks:{ callback:v=>v.toLocaleString('en-IN') } }, y:{ grid:{display:false} } }
+    }
+  });
+
+  comparisonChart = new Chart(document.getElementById('chartComparison'), {
+    type:'bar',
+    data:{ labels:['DIO','DSO','DPO'],
+      datasets:[
+        { label:'Current', data:[curDio,curDso,curDpo], backgroundColor:LIGHTBLUE, borderRadius:4 },
+        { label:'Scenario', data:[newDio,newDso,newDpo], backgroundColor:NAVY, borderRadius:4 },
+      ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{ boxWidth:12, boxHeight:12 } } },
+      scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#EAF2F8'} } }
+    }
+  });
+}
+
+updateSimulator();
+
+</script>
+</body>
+</html>
